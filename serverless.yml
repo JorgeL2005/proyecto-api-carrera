@@ -1,0 +1,94 @@
+org: jorgeleonv
+service: proyecto-api-carrera
+
+provider:
+  name: aws
+  runtime: python3.12
+  memorySize: 1024
+  timeout: 29 # Reducido para cumplir con API Gateway
+  iam:
+    role: arn:aws:iam::831178165254:role/LabRole
+  environment:
+    TABLE_NAME: ${sls:stage}-t_carreras # Nombre dinámico de la tabla DynamoDB
+
+functions:
+  CrearCarrera:
+    handler: CrearCarrera.lambda_handler
+    name: ${sls:stage}-CrearCarrera
+    events:
+      - http:
+          path: /carreras/crear
+          method: post
+          cors: true
+          integration: lambda
+          request:
+            template:
+              application/json: |
+                {
+                  "method": "$context.httpMethod",
+                  "path": "$context.path",
+                  "headers": {
+                    "Authorization": "$input.params('Authorization')"
+                  },
+                  "body": $input.body
+                }
+
+  ConsultarCarrera:
+    handler: ConsultarCarrera.lambda_handler
+    name: ${sls:stage}-ConsultarCarrera
+    events:
+      - http:
+          path: /carreras/consultar
+          method: post
+          cors: true
+          integration: lambda
+          request:
+            template:
+              application/json: |
+                {
+                  "method": "$context.httpMethod",
+                  "path": "$context.path",
+                  "headers": {
+                    "Authorization": "$input.params('Authorization')"
+                  },
+                  "body": $input.body
+                }
+
+  EliminarCarrera:
+    handler: EliminarCarrera.lambda_handler
+    name: ${sls:stage}-EliminarCarrera
+    events:
+      - http:
+          path: /carreras/eliminar
+          method: delete
+          cors: true
+          integration: lambda
+          request:
+            template:
+              application/json: |
+                {
+                  "method": "$context.httpMethod",
+                  "path": "$context.path",
+                  "headers": {
+                    "Authorization": "$input.params('Authorization')"
+                  },
+                  "body": $input.body
+                }
+
+resources:
+  Resources:
+    TablaCarreras:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.TABLE_NAME}
+        AttributeDefinitions:
+          - AttributeName: tenant_id
+            AttributeType: S
+          - AttributeName: carrera_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: tenant_id
+            KeyType: HASH
+          - AttributeName: carrera_id
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST # Facturación basada en uso
